@@ -34,7 +34,7 @@ def insert_child_nodes(tree: ET.Element, node: ET.Element, parent_xpath: str, in
         if first_only:
             break
 
-def save_xml(tree: ET | ET.Element, output_file_path: str) -> None:
+def save_xml(tree: ET | ET.Element, output_file_path: Path) -> None:
     """
     Writes an xml.etree.ElementTree or xml.etree.ElementTree.Element object
     to a new or existing .xml file pointed at by output_file_path.
@@ -43,26 +43,40 @@ def save_xml(tree: ET | ET.Element, output_file_path: str) -> None:
         tree = ET.ElementTree(tree)
     tree.write(output_file_path, encoding="UTF-8", xml_declaration=True)
 
-def get_slide_path(pptx_directory_path: str, slide_number: int) -> Path:
+def get_media_path(pptx_directory_path: Path) -> Path:
+    """
+    Returns a Path object pointing at the media folder
+    found inside the extracted .pptx file directory pointed at by pptx_directory_path.
+    """
+    return pptx_directory_path / "ppt" / "media"
+
+def get_slide_path(pptx_directory_path: Path, slide_number: int) -> Path:
     """
     Returns a Path object pointing at a specific slide definition .xml file
     found inside the extracted .pptx file directory pointed at by pptx_directory_path.
     """
-    return Path(pptx_directory_path) / "ppt" / "slides" / f"slide{slide_number}.xml"
+    return pptx_directory_path / "ppt" / "slides" / f"slide{slide_number}.xml"
 
-def get_slide_count_directory(pptx_directory_path: str) -> int:
+def get_slide_rels_path(pptx_directory_path: Path, slide_number: int) -> Path:
+    """
+    Returns a Path object pointing at a specific slide relationships definition .xml file
+    found inside the extracted .pptx file directory pointed at by pptx_directory_path.
+    """
+    return pptx_directory_path / "ppt" / "slides" / "_rels" / f"slide{slide_number}.xml.rels"
+
+def get_slide_count_directory(pptx_directory_path: Path) -> int:
     """
     Returns the number of slides found inside the extracted .pptx file directory 
     pointed at by pptx_directory_path.
     """
-    slides_directory_path = Path(pptx_directory_path) / "ppt" / "slides"
+    slides_directory_path = pptx_directory_path / "ppt" / "slides"
     return len([entry for entry in slides_directory_path.iterdir() if entry.is_file()])
 
-def get_slide_count(pptx_path: str) -> int:
+def get_slide_count(pptx_path: Path) -> int:
     """
     Returns the number of slides in the .pptx file pointed at by pptx_path.
     """
-    if Path(pptx_path).is_file():
+    if pptx_path.is_file():
         with tempfile.TemporaryDirectory() as tmp_dir:
             extract(pptx_path, tmp_dir)
             return get_slide_count_directory(tmp_dir)

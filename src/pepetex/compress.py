@@ -5,14 +5,13 @@ import argparse
 
 import errors
 
-def compress(pptx_directory_path: str, output_pptx_path: str = "") -> None:
+def compress(pptx_directory_path: Path, output_pptx_path: Path | None = None) -> None:
     """
     Zips the extracted .pptx file directory pointed at by pptx_directory_path
     and saves the output at output_pptx_path.
     """
-    output_pptx_path = output_pptx_path or f"./{Path(pptx_directory_path).stem}.pptx"
-    shutil.make_archive(output_pptx_path, "zip", pptx_directory_path)
-    Path(f"{output_pptx_path}.zip").rename(Path(output_pptx_path))
+    output_pptx_path = output_pptx_path or Path(".") / pptx_directory_path.with_suffix(".pptx").name
+    Path(shutil.make_archive(output_pptx_path, "zip", pptx_directory_path)).replace(output_pptx_path)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Compresses an extracted .pptx back into a .pptx file.")

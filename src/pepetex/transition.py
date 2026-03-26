@@ -1,7 +1,6 @@
 from pathlib import Path
 import xml.etree.ElementTree as ET
 import tempfile
-import os
 
 import argparse
 
@@ -52,7 +51,7 @@ def get_transition_index(slide: ET.Element) -> int:
             return i
     return i + 1
 
-def transition_directory(pptx_directory_path: str, transition_path: str, slide_numbers: list[int]) -> None:
+def transition_directory(pptx_directory_path: Path, transition_path: Path, slide_numbers: list[int]) -> None:
     """
     Sets the transition defined in the .xml file pointed at by transition_path
     as the animated transition of slides slide_numbers of the extracted .pptx file directory
@@ -67,10 +66,9 @@ def transition_directory(pptx_directory_path: str, transition_path: str, slide_n
         transition_element = get_transition_element(transition_tree)
         transition_index = get_transition_index(slide)
         utils.insert_child_nodes(slide, transition_element, ".", transition_index)
-        os.remove(slide_path)
         utils.save_xml(slide, slide_path)
 
-def transition(pptx_path: str, transition_path: str, slide_numbers: list[int] | None = None) -> None:
+def transition(pptx_path: Path, transition_path: Path, slide_numbers: list[int] | None = None) -> None:
     """
     Sets the transition defined in the .xml file pointed at by transition_path
     as the animated transition of slides slide_numbers of .pptx file 
@@ -78,11 +76,10 @@ def transition(pptx_path: str, transition_path: str, slide_numbers: list[int] | 
     """
     if not slide_numbers:
         slide_numbers = list(range(1, 1 + utils.get_slide_count(pptx_path)))
-    if Path(pptx_path).is_file():
+    if pptx_path.is_file():
         with tempfile.TemporaryDirectory() as tmp_dir:
             extract(pptx_path, tmp_dir)
             transition_directory(tmp_dir, transition_path, slide_numbers)
-            os.remove(pptx_path)
             compress(tmp_dir, pptx_path)
     else:
         transition_directory(pptx_path, transition_path, slide_numbers)
@@ -93,9 +90,11 @@ if __name__ == "__main__":
     parser.add_argument("-t", "--transition-path", type=str, required=True, help="Path to an .xml file that defines a transition nested directly inside the root.")
     parser.add_argument("-s", "--slide-numbers", type=int, nargs="+", help="List of slides to modify, provided by their slide number (counting from 1). If not provided, the transition will be applied to every slide.")
     args = parser.parse_args()
-    errors.error_validation_file_missing(args.pptx_path)
-    errors.error_validation_file_extension(args.pptx_path, ".pptx")
-    errors.error_validation_file_missing(args.transition_path)
-    errors.error_validation_file_extension(args.transition_path, ".xml")
-    errors.error_validation_slide_numbers(args.slide_numbers, utils.get_slide_count(args.pptx_path))
-    transition(args.pptx_path, args.transition_path, args.slide_numbers)
+    arg_pptx_path = Path(args.pptx_path)
+    arg_transition_path = Path(args.transition_path)
+    arg_slide_numbers = args.slide_numbers
+    errors.error_validation_path_missing(arg_pptx_path)
+    errors.error_validation_file_missing(arg_transition_path)
+    errors.error_validation_file_extension(arg_transition_path, ".xml")
+    errors.error_validation_slide_numbers_out_of_range(arg_slide_numbers, utils.get_slide_count(arg_pptx_path))
+    transition(arg_pptx_path, arg_transition_path, arg_slide_numbers)
