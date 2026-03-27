@@ -1,8 +1,0 @@
-<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<p:sld 
-    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-    xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main">
-    <p:transition spd="slow">
-        <p:wheel spokes="1"/>
-    </p:transition>
-</p:sld>

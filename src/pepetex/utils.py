@@ -78,8 +78,9 @@ def get_slide_count(pptx_path: Path) -> int:
     """
     if pptx_path.is_file():
         with tempfile.TemporaryDirectory() as tmp_dir:
-            extract(pptx_path, tmp_dir)
-            return get_slide_count_directory(tmp_dir)
+            tmp_dir_path = Path(tmp_dir)
+            extract(pptx_path, tmp_dir_path)
+            return get_slide_count_directory(tmp_dir_path)
     else:
         return get_slide_count_directory(pptx_path)
 

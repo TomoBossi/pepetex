@@ -1,4 +1,5 @@
 import sys
+import json
 from pathlib import Path
 
 def error_validation(error_condition: bool, error_message: str) -> None:
@@ -65,3 +66,33 @@ def error_validation_negative_numbers(args: dict[str, int | float | None]) -> No
         any(value is not None and value < 0 for value in args.values()),
         f"all of the following must be positive numbers: {', '.join(args.keys())}"
     )
+
+def error_validation_unavailable_transition(transition_name: str, available_transition_names: list[str]) -> None:
+    error_validation(
+        transition_name not in available_transition_names,
+        f"invalid transition name, available transitions are {', '.join(available_transition_names)}"
+    )
+
+def error_validation_invalid_transition_attribs_json(json_str: str | None) -> None:
+    if json_str is not None:
+        json_valid = True
+        try:
+            json.loads(json_str)
+        except:
+            json_valid = False
+        error_validation(
+            not json_valid,
+            "transition attributes must be provided as a valid json string"
+        )
+
+def error_validation_invalid_transition_attribs(transition_attribs: dict | None, transition_attrib_definitions: dict) -> None:
+    if transition_attribs is not None:
+        invalid_attribs = [
+            attrib_name
+            for attrib_name, attrib_value in transition_attribs.items()
+            if not transition_attrib_definitions[attrib_name]["validations"](attrib_value)
+        ]
+        error_validation(
+            invalid_attribs,
+            f"invalid transition attribute value provided for {', '.join(invalid_attribs)}"
+        )
