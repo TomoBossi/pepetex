@@ -78,20 +78,39 @@ def error_validation_invalid_transition_attribs_json(json_str: str | None) -> No
         json_valid = True
         try:
             json.loads(json_str)
-        except:
+        except json.JSONDecodeError, UnicodeDecodeError:
             json_valid = False
         error_validation(
             not json_valid,
             "transition attributes must be provided as a valid json string"
         )
 
-def error_validation_invalid_transition_attribs(transition_attribs: dict | None, transition_attrib_definitions: dict) -> None:
+def error_validation_extra_transition_attribs(transition_attribs: dict | None, transition_attrib_definitions: list[dict]) -> None:
     if transition_attribs is not None:
-        invalid_attribs = [
-            attrib_name
-            for attrib_name, attrib_value in transition_attribs.items()
-            if not transition_attrib_definitions[attrib_name]["validations"](attrib_value)
-        ]
+        available_attribs = [attrib["name"] for attrib in transition_attrib_definitions] 
+        extra_attribs = [attrib for attrib in transition_attribs if attrib not in available_attribs]
+        error_validation(
+            extra_attribs,
+            f"invalid transition attribute {', '.join(extra_attribs)}, available attributes are {', '.join(available_attribs)}"
+        )
+
+def error_validation_mistyped_transition_attribs(transition_attribs: dict | None, transition_attrib_definitions: list[dict]) -> None:
+    if transition_attribs is not None:
+        mistyped_attribs = []
+        for attrib in transition_attrib_definitions:
+            if attrib["name"] in transition_attribs and not isinstance(transition_attribs[attrib["name"]], attrib["type"]):
+                mistyped_attribs.append(attrib["name"])
+        error_validation(
+            mistyped_attribs,
+            f"invalid transition attribute value type provided for {', '.join(mistyped_attribs)}"
+        )
+
+def error_validation_invalid_transition_attribs(transition_attribs: dict | None, transition_attrib_definitions: list[dict]) -> None:
+    if transition_attribs is not None:
+        invalid_attribs = []
+        for attrib in transition_attrib_definitions:
+            if attrib["name"] in transition_attribs and not attrib["validations"](transition_attribs[attrib["name"]]):
+                invalid_attribs.append(attrib["name"])
         error_validation(
             invalid_attribs,
             f"invalid transition attribute value provided for {', '.join(invalid_attribs)}"

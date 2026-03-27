@@ -390,7 +390,9 @@ def main():
     errors.error_validation_unavailable_transition(arg_transition_name, list(TRANSITIONS.keys()))
     errors.error_validation_invalid_transition_attribs_json(arg_transition_attribs)
     arg_transition_attribs = None if arg_transition_attribs is None else json.loads(arg_transition_attribs)
-    errors.error_validation_invalid_transition_attribs(arg_transition_attribs, TRANSITION_ATTRIBS)
+    errors.error_validation_extra_transition_attribs(arg_transition_attribs, TRANSITIONS[arg_transition_name]["attribs"])
+    errors.error_validation_mistyped_transition_attribs(arg_transition_attribs, TRANSITIONS[arg_transition_name]["attribs"])
+    errors.error_validation_invalid_transition_attribs(arg_transition_attribs, TRANSITIONS[arg_transition_name]["attribs"])
     errors.error_validation_slide_numbers_out_of_range(arg_slide_numbers, utils.get_slide_count(arg_pptx_path))
     transition(arg_pptx_path, arg_transition_name, arg_transition_attribs, arg_slide_numbers)
 
