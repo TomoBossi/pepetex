@@ -1,17 +1,15 @@
-from pathlib import Path
-import xml.etree.ElementTree as ET
-import tempfile
 import copy
 import json
-
+import tempfile
 import argparse
+import xml.etree.ElementTree as ET
+from pathlib import Path
 
+import utils
+import errors
 from extract import extract
 from compress import compress
-from namespaces import namespace_uris
-import utils
-
-import errors
+from namespaces import PREFIX_NAMESPACES
 
 def set_transition_attrib_default(attrib: dict, default) -> dict:
     """
@@ -304,15 +302,15 @@ def get_transition_element(transition_tree: ET.Element) -> ET.Element:
     parsed_tag = utils.get_parsed_tag(transition_element)["tag"]
     if parsed_tag == "Choice":
         wrapper = ET.fromstring(ALTERNATE_CONTENT_XML)
-        utils.insert_child_nodes(wrapper, transition_element, f".//{{{namespace_uris['mc']}}}AlternateContent")
-        transition_element = wrapper.findall(f".//{{{namespace_uris['mc']}}}AlternateContent")[0]
+        utils.insert_child_nodes(wrapper, transition_element, f".//{{{PREFIX_NAMESPACES['mc']}}}AlternateContent")
+        transition_element = wrapper.findall(f".//{{{PREFIX_NAMESPACES['mc']}}}AlternateContent")[0]
     return transition_element
 
 def get_transition_index(slide: ET.Element) -> int:
     """
     Returns the <p:sld> children index at which the transition 
     must be inserted in order to be compliant with PresentationML.
-    See the end of page 3970 of ISO/IEC 29500-1 Third edition 2012-09-01.
+    See lines 1361-1367 at the end of page 3970 of ISO/IEC 29500-1 Third edition 2012-09-01.
     """
     i = 0
     for i, child in enumerate(slide):
@@ -351,8 +349,8 @@ def transition_directory(pptx_directory_path: Path, transition_name: str, transi
         slide_path = utils.get_slide_path(pptx_directory_path, slide_number)
         slide = ET.parse(slide_path).getroot()
         transition_tree = ET.fromstring(build_transition_xml(transition_name, transition_attribs))
-        utils.remove_nodes(slide, f"./{{{namespace_uris['p']}}}transition")
-        utils.remove_nodes(slide, f"./{{{namespace_uris['mc']}}}AlternateContent")
+        utils.remove_nodes(slide, f"./{{{PREFIX_NAMESPACES['p']}}}transition")
+        utils.remove_nodes(slide, f"./{{{PREFIX_NAMESPACES['mc']}}}AlternateContent")
         transition_element = get_transition_element(transition_tree)
         transition_index = get_transition_index(slide)
         utils.insert_child_nodes(slide, transition_element, ".", transition_index)

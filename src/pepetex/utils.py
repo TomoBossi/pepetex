@@ -1,6 +1,6 @@
-from pathlib import Path
-import xml.etree.ElementTree as ET
 import tempfile
+import xml.etree.ElementTree as ET
+from pathlib import Path
 
 from extract import extract
 
@@ -34,14 +34,16 @@ def insert_child_nodes(tree: ET.Element, node: ET.Element, parent_xpath: str, in
         if first_only:
             break
 
-def save_xml(tree: ET | ET.Element, output_file_path: Path) -> None:
+def save_xml(tree: ET | ET.Element, output_file_path: Path, default_namespace: str | None = None) -> None:
     """
     Writes an xml.etree.ElementTree or xml.etree.ElementTree.Element object
     to a new or existing .xml file pointed at by output_file_path.
     """
+    if default_namespace is not None:
+        ET.register_namespace("", default_namespace)
     if isinstance(tree, ET.Element):
         tree = ET.ElementTree(tree)
-    tree.write(output_file_path, encoding="UTF-8", xml_declaration=True)
+    tree.write(output_file_path, encoding="UTF-8", method='xml', xml_declaration=True)
 
 def get_media_path(pptx_directory_path: Path) -> Path:
     """
@@ -93,6 +95,6 @@ def get_parsed_tag(node: ET.Element) -> dict[str, str]:
     parsed_tag = {"tag": tag}
     if tag[0] == "{":
         split_tag = tag.split("}")
-        parsed_tag["uri"] = split_tag[0][1:]
+        parsed_tag["ns_uri"] = split_tag[0][1:]
         parsed_tag["tag"] = split_tag[1]
     return parsed_tag

@@ -1,7 +1,10 @@
 import xml.etree.ElementTree as ET
 
-namespace_uris = {
+DEFAULT_NAMESPACE_CONTENT_TYPES = "http://schemas.openxmlformats.org/package/2006/content-types"
+DEFAULT_NAMESPACE_RELATIONSHIPS = "http://schemas.openxmlformats.org/package/2006/relationships"
+PREFIX_NAMESPACES = {
     "a": "http://schemas.openxmlformats.org/drawingml/2006/main",
+    "a16": "http://schemas.microsoft.com/office/drawing/2014/main",
     "r": "http://schemas.openxmlformats.org/officeDocument/2006/relationships",
     "mc": "http://schemas.openxmlformats.org/markup-compatibility/2006",
     "mv": "urn:schemas-microsoft-com:mac:vml",
@@ -16,8 +19,7 @@ namespace_uris = {
     "p15": "http://schemas.microsoft.com/office/powerpoint/2012/main",
     "ahyp": "http://schemas.microsoft.com/office/drawing/2018/hyperlinkcolor"
 }
+NAMESPACE_PREFIXES = {ns_uri: prefix for prefix, ns_uri in PREFIX_NAMESPACES.items()}
 
-uri_namespaces = {uri: ns for ns, uri in namespace_uris.items()}
-
-for ns, uri in namespace_uris.items():
-    ET.register_namespace(ns, uri)
+for prefix, ns_uri in PREFIX_NAMESPACES.items():
+    ET.register_namespace(prefix, ns_uri)

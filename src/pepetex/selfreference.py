@@ -1,18 +1,16 @@
-from pathlib import Path
-import xml.etree.ElementTree as ET
-import tempfile
 import shutil
-
+import tempfile
 import argparse
+import xml.etree.ElementTree as ET
+from pathlib import Path
 
 from PIL import Image
 
+import utils
+import errors
 from extract import extract
 from compress import compress
-from namespaces import namespace_uris
-import utils
-
-import errors
+from namespaces import PREFIX_NAMESPACES
 
 SELF_PIC_XML = """<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <p:sld 

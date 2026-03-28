@@ -1,7 +1,6 @@
 import zipfile
-from pathlib import Path
-
 import argparse
+from pathlib import Path
 
 import errors
 
