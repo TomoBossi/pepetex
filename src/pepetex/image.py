@@ -1,5 +1,3 @@
-import shutil
-import tempfile
 import argparse
 import xml.etree.ElementTree as ET
 from pathlib import Path
@@ -8,12 +6,8 @@ from PIL import Image
 
 import utils
 import errors
-from extract import extract
-from compress import compress
-from namespaces import PREFIX_NAMESPACES, DEFAULT_NAMESPACE_CONTENT_TYPES, DEFAULT_NAMESPACE_RELATIONSHIPS
+from namespaces import PREFIX_NAMESPACES, DEFAULT_NAMESPACE_RELATIONSHIPS
 
-ANIMATION_ATTRIBS = {}
-ANIMATIONS = {}
 PIC_XML = """<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <p:sld 
     xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
@@ -54,26 +48,6 @@ REL_XML = """<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
     <Relationship Id="{rel_id}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="../media/{image_name}"/>
 </Relationships>
 """
-CONTENT_TYPES_XML = """<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
-    <Default ContentType="image/jpeg" Extension="jpeg"/>
-    <Default ContentType="image/gif" Extension="gif"/>
-    <Default ContentType="image/jpeg" Extension="jpg"/>
-    <Default ContentType="image/png" Extension="png"/>
-</Types>
-"""
-
-def add_image(pptx_directory_path: Path, image_path: Path) -> str:
-    """
-    Copies the image file pointed at by image_path into the media directory
-    of the extracted .pptx file directory pointed at by pptx_directory_path. 
-    Returns the autoincremental filename assigned to the image.
-    """
-    media_path = utils.get_media_path(pptx_directory_path)
-    image_id = max((int(im.stem[5:]) for im in media_path.glob("image*") if im.stem[5:].isdigit()), default=0) + 1
-    image_name = f"image{image_id}{image_path.suffix}"
-    shutil.copyfile(image_path, media_path / image_name)
-    return image_name
 
 def add_image_relationship(image_name: str, slide_rels: ET.Element) -> str:
     """
@@ -91,24 +65,6 @@ def add_image_relationship(image_name: str, slide_rels: ET.Element) -> str:
     rel = ET.fromstring(REL_XML.format(**{"rel_id": rel_id, "image_name": image_name}))[0]
     utils.append_child_nodes(slide_rels, rel, ".")
     return rel_id
-
-def get_max_uid(tree: ET.Element) -> int:
-    """
-    Returns the highest-numbered UID (id attribute) in the xml tree.
-    """
-    uids = [0]
-    uid = tree.attrib.get("id", "0")
-    if uid.isdigit():
-        uids = [int(uid)]
-    for child in tree:
-        uids.append(get_max_uid(child))
-    return max(uids)
-
-def get_new_uid(tree: ET.Element) -> int:
-    """
-    Returns a new available UID (id attribute) for use in the xml tree.
-    """
-    return get_max_uid(tree) + 1
 
 def get_image_ar(image_path: Path) -> float:
     """
@@ -132,18 +88,6 @@ def insert_image(slide: ET.Element, image_element: ET.Element, image_index: int 
         image_index = max_index
     utils.insert_child_nodes(slide, image_element, sptree_xpath, image_index + 2)
 
-def set_image_content_types(pptx_directory_path: Path) -> None:
-    """
-    Adds defaults in [Content_Types].xml for all of the most common image file formats.
-    """
-    content_types_path = pptx_directory_path / "[Content_Types].xml"
-    content_types_element = ET.parse(content_types_path).getroot()
-    image_content_types = ET.fromstring(CONTENT_TYPES_XML)
-    for image_content_type in image_content_types:
-        if not any(child.attrib.get("Extension") == image_content_type.attrib["Extension"] for child in content_types_element):
-            utils.insert_child_nodes(content_types_element, image_content_type, ".")
-    utils.save_xml(content_types_element, content_types_path, default_namespace=DEFAULT_NAMESPACE_CONTENT_TYPES)
-
 def image_directory(
         pptx_directory_path: Path,
         slide_numbers: list[int],
@@ -154,10 +98,8 @@ def image_directory(
         rot: int = 0,
         image_path: Path | None = None,
         image_name: str | None = None,
-        image_index: int | None = None,
-        animation_name: str | None = None,
-        animation_attribs: dict | None = None
-    ) -> str:
+        image_index: int | None = None
+    ) -> dict:
     """
     Inserts the image pointed at by either image_path or image_name
     at index image_index of the slides indicated by slide_numbers
@@ -170,21 +112,23 @@ def image_directory(
     Image position, size and rotation can be set with x, y, cx, cy and rot.
     If cy is not provided, it is automatically calculated based on cx
     and the aspect ratio of the image.
-    Returns the name of the image in the pptx media directory.
+    Returns the name of the image in the pptx media directory,
+    as well as its rId and uid per slide.
     """
     if image_path:
-        image_name = add_image(pptx_directory_path, image_path)
+        image_name = utils.add_image(pptx_directory_path, image_path)
     else:
         image_path = utils.get_media_path(pptx_directory_path) / image_name
-    set_image_content_types(pptx_directory_path)
+    utils.set_image_content_types(pptx_directory_path)
+    slide_ids = {}
     for slide_number in slide_numbers:
         slide_rels_path = utils.get_slide_rels_path(pptx_directory_path, slide_number)
         slide_rels = ET.parse(slide_rels_path).getroot()
         slide_path = utils.get_slide_path(pptx_directory_path, slide_number)
         slide = ET.parse(slide_path).getroot()
         rel_id = add_image_relationship(image_name, slide_rels)
-        uid = get_new_uid(slide)
-        if not cy:
+        uid = utils.get_new_uid(slide)
+        if cy is None or cy == 0:
             cy = cx/get_image_ar(image_path)
         image_element = ET.fromstring(PIC_XML.format(**{
             "uid": uid,
@@ -196,7 +140,15 @@ def image_directory(
         insert_image(slide, image_element, image_index)
         utils.save_xml(slide_rels, slide_rels_path, default_namespace=DEFAULT_NAMESPACE_RELATIONSHIPS)
         utils.save_xml(slide, slide_path)
-    return image_name
+        slide_ids[slide_number] = {
+            "rId": rel_id,
+            "uid": uid
+        }
+    return {
+        "name": image_name,
+        "slide_ids": slide_ids
+    }
+
 
 def image(
         pptx_path: Path,
@@ -208,10 +160,8 @@ def image(
         image_path: Path | None = None,
         image_name: str | None = None,
         image_index: int | None = None,
-        slide_numbers: list[int] | None = None,
-        animation_name: str | None = None,
-        animation_attribs: dict | None = None
-    ) -> str:
+        slide_numbers: list[int] | None = None
+    ) -> dict:
     """
     Inserts the image pointed at by either image_path or image_name
     at index image_index of the slides indicated by slide_numbers
@@ -224,19 +174,12 @@ def image(
     Image position, size and rotation can be set with x, y, cx, cy and rot.
     If cy is not provided, it is automatically calculated based on cx
     and the aspect ratio of the image.
-    Returns the name of the image in the pptx media directory.
+    Returns the name of the image in the pptx media directory,
+    as well as its rId and uid per slide.
     """
-    if not slide_numbers:
+    if slide_numbers is None:
         slide_numbers = list(range(1, 1 + utils.get_slide_count(pptx_path)))
-    if pptx_path.is_file():
-        with tempfile.TemporaryDirectory() as tmp_dir:
-            tmp_dir_path = Path(tmp_dir)
-            extract(pptx_path, tmp_dir_path)
-            image_name = image_directory(tmp_dir_path, slide_numbers, x, y, cx, cy, rot, image_path, image_name, image_index, animation_name, animation_attribs)
-            compress(tmp_dir_path, pptx_path)
-            return image_name
-    else:
-        return image_directory(pptx_path, slide_numbers, x, y, cx, cy, rot, image_path, image_name, image_index, animation_name, animation_attribs)
+    return utils.pptx_path_handler(pptx_path, image_directory, [slide_numbers, x, y, cx, cy, rot, image_path, image_name, image_index])
 
 def main():
     parser = argparse.ArgumentParser(description="Inserts an image of custom postion, size and \"depth\" on specific slides.")
@@ -261,11 +204,11 @@ def main():
     arg_cx = args.width
     arg_cy = args.height
     arg_rot = args.rotation
-    errors.error_validation_file_missing(arg_pptx_path)
+    errors.error_validation_path_missing(arg_pptx_path)
     errors.error_validation_any_required_missing({"-ip (--image-path)": arg_image_path, "-in (--image-name)": arg_image_name})
     errors.error_validation_slide_numbers_out_of_range(arg_slide_numbers, utils.get_slide_count(arg_pptx_path))
     errors.error_validation_negative_numbers({"-cx (--width)": arg_cx, "-cy (--height)": arg_cy, "-ii (--image_index)": arg_image_index})
-    image(arg_pptx_path, arg_x, arg_y, arg_cx, arg_cy, arg_rot, arg_image_path, arg_image_name, arg_image_index, arg_slide_numbers)
+    print(image(arg_pptx_path, arg_x, arg_y, arg_cx, arg_cy, arg_rot, arg_image_path, arg_image_name, arg_image_index, arg_slide_numbers))
 
 if __name__ == "__main__":
     main()

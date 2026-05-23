@@ -10,7 +10,7 @@ def compress(pptx_directory_path: Path, output_pptx_path: Path | None = None) ->
     and saves the output at output_pptx_path.
     """
     output_pptx_path = output_pptx_path or Path(".") / pptx_directory_path.with_suffix(".pptx").name
-    Path(shutil.make_archive(output_pptx_path, "zip", pptx_directory_path)).replace(output_pptx_path)
+    Path(shutil.make_archive(str(output_pptx_path), "zip", pptx_directory_path)).replace(output_pptx_path)
 
 def main():
     parser = argparse.ArgumentParser(description="Compresses an extracted .pptx back into a .pptx file.")
