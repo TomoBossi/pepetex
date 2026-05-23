@@ -183,7 +183,7 @@ TRANSITIONS = {
         "attribs": [
             utils.set_attrib_default(TRANSITION_ATTRIBS["spd"], "slow"),
             utils.set_attrib_default(TRANSITION_ATTRIBS["dur"], 1600),
-            utils.set_attrib_default(TRANSITION_ATTRIBS["dir"], "l"),
+            utils.set_attrib_default(TRANSITION_ATTRIBS["dir_direction"], "l"),
             utils.set_attrib_default(TRANSITION_ATTRIBS["isInverted"], 1)
         ]
     },
